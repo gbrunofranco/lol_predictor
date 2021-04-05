@@ -22,8 +22,8 @@ match_fields = {
         "patch": PATCH,
         "region": REGION
     },
-    "team": ["baron_kills", "dragon_kills",],
-    "gamestate":["first_baron", "first_blood", "first_inhibitor", "first_tower"],
+    "team": ["baron_kills", "dragon_kills"],
+    "gamestate":["first_baron", "first_blood", "first_inhibitor", "first_tower", "first_rift_herald", "win"],
     "bans": ["ban_B1", "ban_B2", "ban_B3", "ban_B4", "ban_B5", "ban_R1", "ban_R2", "ban_R3", "ban_R4", "ban_R5"],
     "champions": ["pick_B1", "pick_B2", "pick_B3", "pick_B4", "pick_B5", "pick_R1", "pick_R2", "pick_R3", "pick_R4", "pick_R5"],
 }
