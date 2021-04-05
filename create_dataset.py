@@ -22,13 +22,18 @@ match_fields = {
         "patch": PATCH,
         "region": REGION
     },
-    "team": ["baron_kills", "dragon_kills",],
-    "gamestate":["first_baron", "first_blood", "first_inhibitor", "first_tower"],
+    "team": ["baron_kills", "dragon_kills", "inhibitor_kills"],
+    "gamestate":["first_baron", "first_blood", "first_inhibitor", "first_tower", "first_rift_herald", "win"],
     "bans": ["ban_B1", "ban_B2", "ban_B3", "ban_B4", "ban_B5", "ban_R1", "ban_R2", "ban_R3", "ban_R4", "ban_R5"],
     "champions": ["pick_B1", "pick_B2", "pick_B3", "pick_B4", "pick_B5", "pick_R1", "pick_R2", "pick_R3", "pick_R4", "pick_R5"],
 }
 
 def setup_files():
+    '''
+    Setup function that creates the missing files
+    '''
+
+
     if not os.path.exists(MATCHES_FILE):
         with open(MATCHES_FILE, 'w') as matches_file:
             for field in match_fields["dynamic"] + list(match_fields["static"].keys()) + match_fields["bans"] + match_fields["champions"] + match_fields["gamestate"]:
@@ -40,11 +45,15 @@ def setup_files():
 
 
 def handle_print(match: Match):
+    '''
+    Handles the printing of a match
+
+            Parameters:
+                    match (Match): the match we want to output to the configured .tsv file
+    '''
+
+
     with open(MATCHES_FILE, 'a') as matches_file:
-        # print([match.id, match.duration.total_seconds(), match.is_remake, match.patch.majorminor, match.region.value])
-        # print([match.blue_team.baron_kills, match.blue_team.dragon_kills, match.blue_team.first_baron, match.blue_team.first_blood, match.blue_team.first_inhibitor, match.blue_team.first_tower])
-        # print([banned_champ.id if type(banned_champ) == Champion else -1 for banned_champ in match.blue_team.bans + match.red_team.bans])
-        # print([participant.champion.id for participant in match.blue_team.participants + match.red_team.participants])
         print(*[getattr(match, field) for field in match_fields["dynamic"]], file=matches_file, sep='\t', end='\t')
         print(*[value for value in match_fields["static"].values()], file=matches_file, sep='\t', end='\t')
         print(*[banned_champ.id if type(banned_champ) == Champion else -1 for banned_champ in match.blue_team.bans + match.red_team.bans], file=matches_file, sep='\t', end='\t')
@@ -56,6 +65,18 @@ def handle_print(match: Match):
 
 # heavily inspired by: https://github.com/meraki-analytics/cassiopeia/issues/359#issuecomment-787516878
 def filter_match_history(summoner: Summoner, patch: Patch) -> MatchHistory:
+    '''
+    Filters the match history of a summoner to solo q matches and the specified patch
+
+            Parameters:
+                    summoner (Summoner): the summoner we want to filter the match history of
+                    patch (Patch): the patch we want the filtered matches to be of
+            
+            Returns:
+                match_history (MatchHistory): the filtered match history
+    '''
+
+
     end_time: arrow.arrow.Arrow = patch.end
     if end_time is None:
         end_time = arrow.now()
@@ -64,6 +85,10 @@ def filter_match_history(summoner: Summoner, patch: Patch) -> MatchHistory:
 
 
 def collect_matches():
+    '''
+    Collects matches and summoners id in order to feed handle_prints() matches. Discovers new summoners in the games of a default summoner
+    '''
+
 
     summoner: Summoner = Summoner(name=INIT_SUMMONER, region=REGION)
     patch: Patch = Patch.from_str(PATCH, region=REGION)
