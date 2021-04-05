@@ -1,12 +1,14 @@
 import random
 import arrow
+import os
 import cassiopeia as cass
 from sortedcontainers import SortedList
 from config import *
+from secrets import API_KEY
 from cassiopeia.core import Summoner, MatchHistory, Match
 from cassiopeia import Queue, Patch, Champion
 from cassiopeia.core.match import Participant
-import os
+
 
 
 cass.set_riot_api_key(API_KEY)
@@ -100,7 +102,7 @@ def collect_matches():
     pulled_match_ids: SortedList[str] = SortedList()
     counter = 0
     while unpulled_summoner_ids and counter < 10000:
-        # Get a random summoner from our list of unpulled summoners and pull their match history
+        # get a random summoner from our list of unpulled summoners and pull their match history
         new_summoner_id: str = random.choice(unpulled_summoner_ids)
         new_summoner: Summoner = Summoner(id=new_summoner_id, region=REGION)
         matches: MatchHistory = filter_match_history(new_summoner, patch)
@@ -109,7 +111,7 @@ def collect_matches():
         pulled_summoner_ids.add(new_summoner_id)
 
         [handle_print(match) for match in matches]
-        while unpulled_match_ids and counter < 10000:
+        while unpulled_match_ids and counter < MAX_MATCHES:
             # Get a random match from our list of matches
             new_match_id: str = random.choice(unpulled_match_ids)
             new_match: Match = Match(id=new_match_id, region=REGION)
@@ -118,7 +120,6 @@ def collect_matches():
                 if participant.summoner.id not in pulled_summoner_ids and participant.summoner.id not in unpulled_summoner_ids:
                     unpulled_summoner_ids.add(participant.summoner.id)
             # The above lines will trigger the match to load its data by iterating over all the participants.
-            # If you have a database in your datapipeline, the match will automatically be stored in it.
             unpulled_match_ids.remove(new_match_id)
             pulled_match_ids.add(new_match_id)
             counter = counter +1
