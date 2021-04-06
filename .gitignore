@@ -1,0 +1,5 @@
+.venv
+.vscode
+secrets.py
+__pycache__
+matches.tsv
