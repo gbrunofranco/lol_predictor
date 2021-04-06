@@ -44,6 +44,7 @@ def setup_files():
             print(*[team+field for team in ["blue_", "red_"] for field in match_fields["team"]], file=matches_file, sep='\t', end='\n')
 
 
+printed_matches: int = 0
 def handle_print(match: Match):
     '''
     Handles the printing of a match
@@ -52,6 +53,7 @@ def handle_print(match: Match):
                     match (Match): the match we want to output to the configured .tsv file
     '''
 
+    global printed_matches
     with open(MATCHES_FILE, 'a') as matches_file:
         print(*[getattr(match, field) for field in match_fields["dynamic"]], file=matches_file, sep='\t', end='\t')
         print(*[value for value in match_fields["static"].values()], file=matches_file, sep='\t', end='\t')
@@ -62,7 +64,7 @@ def handle_print(match: Match):
         print(*[0 if getattr(match.blue_team, field) == True else 1 for field in match_fields["gamestate"]], file=matches_file, sep='\t', end='\t')
         print(*[getattr(match.blue_team, field) for field in match_fields["team"]], file=matches_file, sep='\t', end='\t')
         print(*[getattr(match.red_team, field) for field in match_fields["team"]], file=matches_file, sep='\t', end='\n')
-
+    printed_matches += 1
 
 # heavily inspired by: https://github.com/meraki-analytics/cassiopeia/issues/359#issuecomment-787516878
 def filter_match_history(summoner: Summoner, patch: Patch) -> MatchHistory:
@@ -98,12 +100,12 @@ def collect_matches():
     pulled_match_ids: SortedList[str] = SortedList()
     input_df = pd.read_csv(MATCHES_FILE, sep='\t')
     pulled_match_counter = -input_df.shape[0]
+    starting_pulled_ids = SortedList(input_df.id)
     del input_df
 
-    starting_pulled_ids = SortedList(input_df.id)
     unpulled_match_ids: SortedList[str] = SortedList()
 
-    while unpulled_summoner_ids and pulled_match_counter < MAX_MATCHES:
+    while unpulled_summoner_ids:
         # get a random summoner from our list of unpulled summoners and pull their match history
         new_summoner_id: int = random.choice(unpulled_summoner_ids)
         new_summoner: Summoner = Summoner(id=new_summoner_id, region=REGION)
@@ -112,8 +114,11 @@ def collect_matches():
         unpulled_summoner_ids.remove(new_summoner_id)
         pulled_summoner_ids.add(new_summoner_id)
 
-        [handle_print(match) if match.id not in starting_pulled_ids else print(f"{match.id} already pulled") for match in matches]
-        while unpulled_match_ids and pulled_match_counter < MAX_MATCHES:
+        global printed_matches
+        [handle_print(match) for match in matches if match.id not in starting_pulled_ids and printed_matches < MAX_MATCHES]
+        
+        if printed_matches >= MAX_MATCHES: break
+        while unpulled_match_ids:
             # Get a random match from our list of matches
             new_match_id: int = random.choice(unpulled_match_ids)
             new_match: Match = Match(id=new_match_id, region=REGION)
