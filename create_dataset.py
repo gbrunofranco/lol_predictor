@@ -72,29 +72,33 @@ def handle_print(match: Match):
     '''
 
     global printed_matches
-    with open(MATCHES_FILE, 'a') as matches_file:
-        print(*[getattr(match, field) for field in match_fields["dynamic"]], file=matches_file, sep='\t', end='\t')
-        print(*[value for value in match_fields["static"].values()], file=matches_file, sep='\t', end='\t')
-        print(*[banned_champ.id if type(banned_champ) == Champion else -1 for banned_champ in match.blue_team.bans +
-              match.red_team.bans], file=matches_file, sep='\t', end='\t')
-        print(*[participant.champion.id for participant in match.blue_team.participants +
-              match.red_team.participants], file=matches_file, sep='\t', end='\t')
-        print(*[0 if getattr(match.blue_team, field) == True else 1 for field in match_fields["gamestate"]], file=matches_file, sep='\t', end='\t')
-        print(*[getattr(match.blue_team, field) for field in match_fields["team"]], file=matches_file, sep='\t', end='\t')
-        print(*[getattr(match.red_team, field) for field in match_fields["team"]], file=matches_file, sep='\t', end='\n')
 
-    with open(TIMELINES_FILE, 'a') as timelines_file:
-        try:
-            for frame in match.timeline.frames:
-                print(match.id, file=timelines_file, end='\t')
-                print(frame.timestamp, file=timelines_file, end='\t')
-                frame_d = frame.to_dict()
-                for key in range(1, 11):
-                    for field in timeline_fields["player"]:
-                        print(frame_d["participantFrames"][key][field], file=timelines_file, end='\t')
-                print('\r', file=timelines_file)
-        except AttributeError:
-            print(f"Match: {match.id} timeline not found. Skipping...")
+    if GET_MATCHES:
+        with open(MATCHES_FILE, 'a') as matches_file:
+            print(*[getattr(match, field) for field in match_fields["dynamic"]], file=matches_file, sep='\t', end='\t')
+            print(*[value for value in match_fields["static"].values()], file=matches_file, sep='\t', end='\t')
+            print(*[banned_champ.id if type(banned_champ) == Champion else -1 for banned_champ in match.blue_team.bans +
+                match.red_team.bans], file=matches_file, sep='\t', end='\t')
+            print(*[participant.champion.id for participant in match.blue_team.participants +
+                match.red_team.participants], file=matches_file, sep='\t', end='\t')
+            print(*[0 if getattr(match.blue_team, field) == True else 1 for field in match_fields["gamestate"]], file=matches_file, sep='\t', end='\t')
+            print(*[getattr(match.blue_team, field) for field in match_fields["team"]], file=matches_file, sep='\t', end='\t')
+            print(*[getattr(match.red_team, field) for field in match_fields["team"]], file=matches_file, sep='\t', end='\n')
+
+
+    if GET_TIMELINES:
+        with open(TIMELINES_FILE, 'a') as timelines_file:
+            try:
+                for frame in match.timeline.frames:
+                    print(match.id, file=timelines_file, end='\t')
+                    print(frame.timestamp, file=timelines_file, end='\t')
+                    frame_d = frame.to_dict()
+                    for key in range(1, 11):
+                        for field in timeline_fields["player"]:
+                            print(frame_d["participantFrames"][key][field], file=timelines_file, end='\t')
+                    print('\r', file=timelines_file)
+            except AttributeError:
+                print(f"Match: {match.id} timeline not found. Skipping...")
     printed_matches += 1
 
 
