@@ -30,6 +30,14 @@ match_fields = {
     "champions": ["pick_B1", "pick_B2", "pick_B3", "pick_B4", "pick_B5", "pick_R1", "pick_R2", "pick_R3", "pick_R4", "pick_R5"],
 }
 
+timeline_fields = {
+    "dynamic": [
+        "match_id",
+        "timestamp",
+    ],
+    "player": ["neutralMinionsKilled", "creepScore", "currentGold", "level", "experience", "goldEarned"],
+}
+
 
 def setup_files():
     '''
@@ -43,8 +51,18 @@ def setup_files():
 
             print(*[team+field for team in ["blue_", "red_"] for field in match_fields["team"]], file=matches_file, sep='\t', end='\n')
 
+    if not os.path.exists(TIMELINES_FILE):
+        with open(TIMELINES_FILE, 'w') as timelines_file:
+            for field in timeline_fields["dynamic"]:
+                print(field, file=timelines_file, sep='\t', end='\t')
+
+            print(*['P'+str(player)+"_"+field for player in range(1, 11)
+                  for field in timeline_fields["player"]], file=timelines_file, sep='\t', end='\n')
+
 
 printed_matches: int = 0
+
+
 def handle_print(match: Match):
     '''
     Handles the printing of a match
@@ -54,17 +72,35 @@ def handle_print(match: Match):
     '''
 
     global printed_matches
-    with open(MATCHES_FILE, 'a') as matches_file:
-        print(*[getattr(match, field) for field in match_fields["dynamic"]], file=matches_file, sep='\t', end='\t')
-        print(*[value for value in match_fields["static"].values()], file=matches_file, sep='\t', end='\t')
-        print(*[banned_champ.id if type(banned_champ) == Champion else -1 for banned_champ in match.blue_team.bans +
-              match.red_team.bans], file=matches_file, sep='\t', end='\t')
-        print(*[participant.champion.id for participant in match.blue_team.participants +
-              match.red_team.participants], file=matches_file, sep='\t', end='\t')
-        print(*[0 if getattr(match.blue_team, field) == True else 1 for field in match_fields["gamestate"]], file=matches_file, sep='\t', end='\t')
-        print(*[getattr(match.blue_team, field) for field in match_fields["team"]], file=matches_file, sep='\t', end='\t')
-        print(*[getattr(match.red_team, field) for field in match_fields["team"]], file=matches_file, sep='\t', end='\n')
+
+    if GET_MATCHES:
+        with open(MATCHES_FILE, 'a') as matches_file:
+            print(*[getattr(match, field) for field in match_fields["dynamic"]], file=matches_file, sep='\t', end='\t')
+            print(*[value for value in match_fields["static"].values()], file=matches_file, sep='\t', end='\t')
+            print(*[banned_champ.id if type(banned_champ) == Champion else -1 for banned_champ in match.blue_team.bans +
+                match.red_team.bans], file=matches_file, sep='\t', end='\t')
+            print(*[participant.champion.id for participant in match.blue_team.participants +
+                match.red_team.participants], file=matches_file, sep='\t', end='\t')
+            print(*[0 if getattr(match.blue_team, field) == True else 1 for field in match_fields["gamestate"]], file=matches_file, sep='\t', end='\t')
+            print(*[getattr(match.blue_team, field) for field in match_fields["team"]], file=matches_file, sep='\t', end='\t')
+            print(*[getattr(match.red_team, field) for field in match_fields["team"]], file=matches_file, sep='\t', end='\n')
+
+
+    if GET_TIMELINES:
+        with open(TIMELINES_FILE, 'a') as timelines_file:
+            try:
+                for frame in match.timeline.frames:
+                    print(match.id, file=timelines_file, end='\t')
+                    print(frame.timestamp, file=timelines_file, end='\t')
+                    frame_d = frame.to_dict()
+                    for key in range(1, 11):
+                        for field in timeline_fields["player"]:
+                            print(frame_d["participantFrames"][key][field], file=timelines_file, end='\t')
+                    print('\r', file=timelines_file)
+            except AttributeError:
+                print(f"Match: {match.id} timeline not found. Skipping...")
     printed_matches += 1
+
 
 # heavily inspired by: https://github.com/meraki-analytics/cassiopeia/issues/359#issuecomment-787516878
 def filter_match_history(summoner: Summoner, patch: Patch) -> MatchHistory:
@@ -116,8 +152,9 @@ def collect_matches():
 
         global printed_matches
         [handle_print(match) for match in matches if match.id not in starting_pulled_ids and printed_matches < MAX_MATCHES]
-        
-        if printed_matches >= MAX_MATCHES: break
+
+        if printed_matches >= MAX_MATCHES:
+            break
         while unpulled_match_ids:
             # Get a random match from our list of matches
             new_match_id: int = random.choice(unpulled_match_ids)
